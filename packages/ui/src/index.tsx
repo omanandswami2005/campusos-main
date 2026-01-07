@@ -40,5 +40,19 @@ export { Alert, AlertTitle, AlertDescription } from './components/Alert';
 export { Spinner } from './components/Spinner';
 export { Skeleton } from './components/Skeleton';
 
+// New components
+export { Tabs, TabsList, TabsTrigger, TabsContent, type TabsProps } from './components/Tabs';
+export { Avatar, type AvatarProps } from './components/Avatar';
+export { DataTable, type DataTableProps, type Column } from './components/DataTable';
+export {
+  Form,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormDescription,
+  FormMessage,
+  type FormProps,
+} from './components/Form';
+
 // Layout
 export { AppShell } from './components/AppShell';

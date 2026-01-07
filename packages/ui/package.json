@@ -18,13 +18,16 @@
       "require": "./src/index.tsx",
       "types": "./src/index.tsx"
     },
-    "./globals.css": "./src/styles/globals.css"
+    "./globals.css": "./src/styles/globals.css",
+    "./theme.css": "./src/styles/theme.css"
   },
   "scripts": {
     "build": "tsup src/index.tsx --dts --format esm,cjs --external react --external react-dom",
     "dev": "tsup src/index.tsx --dts --format esm,cjs --external react --external react-dom --watch",
     "lint": "eslint .",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "storybook": "storybook dev -p 6006",
+    "storybook:build": "storybook build -o storybook-static"
   },
   "peerDependencies": {
     "react": ">=18.0.0",

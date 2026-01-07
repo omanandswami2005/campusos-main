@@ -1,97 +1,159 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import type { PrintJob, PrintShop } from '@campus-os/types';
-import { HttpClient, PrintingClient } from '@campus-os/api-client';
-import { AppShell, Button } from '@campus-os/ui';
+import { useState, useEffect } from 'react';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@campus-os/ui';
+import { Button } from '@campus-os/ui';
+import { Badge } from '@campus-os/ui';
+import { Input } from '@campus-os/ui';
+import { Label } from '@campus-os/ui';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@campus-os/ui';
+import { Alert, AlertDescription } from '@campus-os/ui';
+import { HttpClient } from '@campus-os/api-client';
+import { PrintingClient } from '@campus-os/api-client';
+import type { PrintShop } from '@campus-os/types';
 
-const apiBase = process.env.NEXT_PUBLIC_PRINTING_API ?? 'http://localhost:4100';
+const httpClient = new HttpClient({ baseUrl: 'http://localhost:4100' });
+const printingClient = new PrintingClient(httpClient);
 
 export default function PrintingPage() {
-  const client = useMemo(() => new PrintingClient(new HttpClient({ baseUrl: apiBase })), [apiBase]);
   const [shops, setShops] = useState<PrintShop[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [job, setJob] = useState<PrintJob | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedShop, setSelectedShop] = useState<string | null>(null);
+  const [fileUrl, setFileUrl] = useState('');
+  const [copies, setCopies] = useState(1);
+  const [uploading, setUploading] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const run = async () => {
-      setLoading(true);
-      setError(null);
+    const fetchShops = async () => {
       try {
-        const data = await client.listShops();
+        const data = await printingClient.listShops();
         setShops(data);
-      } catch (e: any) {
-        setError(e?.message || 'Failed to load shops');
+      } catch (err) {
+        console.error('Failed to load shops', err);
       } finally {
         setLoading(false);
       }
     };
-    run();
-  }, [client]);
+    fetchShops();
+  }, []);
 
-  const createDemoJob = async (shopId: string) => {
-    setError(null);
+  const handlePrint = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedShop) return;
+
+    setUploading(true);
+    setError('');
+    setSuccess('');
+
     try {
-      const created = await client.createJob({
-        userId: 'demo-user',
+      await printingClient.createJob({
+        userId: 'user-123', // Demo user
         collegeId: 'college-a',
-        shopId,
-        fileName: 'demo.pdf',
-        fileUrl: 'https://example.com/demo.pdf',
-        pages: 4,
-        config: { color: false, doubleSided: true, copies: 1, paperSize: 'a4' },
-        paymentMethod: 'upi'
+        shopId: selectedShop,
+        fileName: 'Document.pdf',
+        fileUrl: fileUrl,
+        pages: 10, // Mock page count
+        config: { color: false, doubleSided: true, paperSize: 'A4' },
+        paymentMethod: 'upi',
       });
-      setJob(created);
-    } catch (e: any) {
-      setError(e?.message || 'Failed to create job');
+      setSuccess('Print job submitted successfully!');
+      setFileUrl('');
+    } catch (err: any) {
+      setError(err.message || 'Failed to submit print job');
+    } finally {
+      setUploading(false);
     }
   };
 
   return (
-    <AppShell header={<div className="font-semibold">Printing</div>}>
-      <div className="space-y-4">
-        <p className="text-gray-700">
-          Lists print shops from the printing service and lets you create a demo print job using the
-          shared API client. Configure the service URL via NEXT_PUBLIC_PRINTING_API.
-        </p>
-        {error && <div className="rounded bg-red-100 px-3 py-2 text-sm text-red-700">{error}</div>}
-        {loading ? (
-          <div>Loading shops…</div>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2">
-            {shops.map((shop) => (
-              <div key={shop.id} className="rounded border bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold">{shop.name}</div>
-                    <div className="text-sm text-gray-600">{shop.location}</div>
-                  </div>
-                  <span className="text-xs uppercase text-gray-500">{shop.isActive ? 'Open' : 'Closed'}</span>
-                </div>
-                <div className="mt-2 text-sm text-gray-700">
-                  BW: {shop.pricePerPageBW}¢ · Color: {shop.pricePerPageColor}¢
-                </div>
-                <Button className="mt-3" onClick={() => createDemoJob(shop.id)}>
-                  Create demo job
-                </Button>
-              </div>
-            ))}
-            {!shops.length && <div className="text-sm text-gray-600">No shops available.</div>}
-          </div>
-        )}
+    <div className="container mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-6">Print Shops</h1>
 
-        {job && (
-          <div className="rounded border bg-green-50 p-4 text-sm text-green-800">
-            <div className="font-semibold">Job created</div>
-            <div>ID: {job.id}</div>
-            <div>Status: {job.status}</div>
-            <div>OTP: {job.otp}</div>
-            <div>Total: {job.totalCents} cents</div>
-          </div>
-        )}
-      </div>
-    </AppShell>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="animate-pulse h-40 bg-gray-200 rounded"></div>
+          <div className="animate-pulse h-40 bg-gray-200 rounded"></div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {shops.map((shop) => (
+            <Card key={shop.id}>
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <CardTitle>{shop.name}</CardTitle>
+                  <Badge variant={shop.resourceStatus.paper ? 'default' : 'destructive'}>
+                    {shop.resourceStatus.paper ? 'Open' : 'Out of Paper'}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-sm text-gray-500">📍 {shop.location}</p>
+                <div className="flex gap-4 text-sm">
+                  <span>B&W: ₹{shop.pricePerPageBW}</span>
+                  <span>Color: ₹{shop.pricePerPageColor}</span>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button
+                      className="w-full"
+                      onClick={() => {
+                        setSelectedShop(shop.id);
+                        setSuccess('');
+                        setError('');
+                      }}
+                    >
+                      Print Here
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Print at {shop.name}</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handlePrint} className="space-y-4 mt-4">
+                      {success && (
+                        <Alert className="bg-green-50 text-green-800">
+                          <AlertDescription>{success}</AlertDescription>
+                        </Alert>
+                      )}
+                      {error && (
+                        <Alert variant="destructive">
+                          <AlertDescription>{error}</AlertDescription>
+                        </Alert>
+                      )}
+
+                      <div className="space-y-2">
+                        <Label>File URL (Demo)</Label>
+                        <Input
+                          placeholder="https://example.com/doc.pdf"
+                          value={fileUrl}
+                          onChange={(e) => setFileUrl(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Copies</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={copies}
+                          onChange={(e) => setCopies(Number(e.target.value))}
+                        />
+                      </div>
+                      <Button type="submit" className="w-full" disabled={uploading}>
+                        {uploading ? 'Submitting...' : 'Submit Print Job'}
+                      </Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

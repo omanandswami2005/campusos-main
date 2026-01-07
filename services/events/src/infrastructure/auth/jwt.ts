@@ -1,4 +1,4 @@
-import { JWT_SECRET } from '../state/memory';
+import { JWT_SECRET } from '../../application/state/memory';
 
 interface TokenPayload {
   sub: string;

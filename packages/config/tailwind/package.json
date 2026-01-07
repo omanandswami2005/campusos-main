@@ -1,0 +1,13 @@
+{
+  "name": "@campus-os/config/tailwind",
+  "version": "0.1.0",
+  "private": true,
+  "main": "tailwind.config.ts",
+  "dependencies": {
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.1",
+    "@types/node": "^20.11.30"
+  }
+}

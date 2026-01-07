@@ -13,6 +13,7 @@
     "@campus-os/database": "workspace:*",
     "@campus-os/security": "workspace:*",
     "@campus-os/types": "workspace:*",
+    "@campus-os/utils": "workspace:*",
     "bcryptjs": "^2.4.3",
     "jose": "^5.9.0",
     "pino": "^9.4.0",

@@ -1,24 +1,21 @@
-import pino from 'pino';
+import { createLogger } from '@campus-os/utils';
 
-const isDev = process.env.NODE_ENV !== 'production';
+// Instantiate logger for 'auth' service
+const serviceLogger = createLogger('auth');
 
-export const logger = pino({
-  level: process.env.LOG_LEVEL || (isDev ? 'debug' : 'info'),
-  transport: isDev
-    ? {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-          translateTime: 'SYS:standard',
-          ignore: 'pid,hostname',
-        },
-      }
-    : undefined,
-  base: {
-    service: 'auth',
-  },
-});
+// Export individual methods to match existing interface
+export const logger = {
+  info: serviceLogger.info,
+  error: serviceLogger.error,
+  warn: serviceLogger.warn,
+  debug: serviceLogger.debug,
+  child: () => logger, // simplified stub
+};
+
+export const requestLogger = serviceLogger.request;
+export const errorLogger = serviceLogger.error;
+export const infoLogger = serviceLogger.info;
 
 export const createRequestLogger = (requestId: string) => {
-  return logger.child({ requestId });
+  return logger;
 };

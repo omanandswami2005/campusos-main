@@ -19,7 +19,7 @@ export function getRedisClient(): Redis | null {
   if (!redisClient) {
     redisClient = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
-      retryDelayOnFailover: 100,
+      // retryDelayOnFailover: 100, // Fixed type error
       lazyConnect: true,
     });
 

@@ -2,3 +2,4 @@ export * from './http';
 export * from './auth';
 export * from './canteen';
 export * from './printing';
+export * from './events';

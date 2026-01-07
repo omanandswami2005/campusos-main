@@ -2,9 +2,8 @@
 const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
-  experimental: {
-    typedRoutes: true
-  }
+  typedRoutes: true,
+  transpilePackages: ['@campus-os/ui']
 };
 
 export default nextConfig;

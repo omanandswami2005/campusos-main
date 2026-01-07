@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsup src/index.ts --dts --format esm,cjs",
-    "lint": "eslint src --ext .ts",
+    "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

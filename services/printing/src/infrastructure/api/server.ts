@@ -1,9 +1,23 @@
-import http from 'node:http';
+import http, { ServerResponse } from 'node:http';
+import { ApiError, ApiResponse, createLogger } from '@campus-os/utils';
+const { requestLogger, errorLogger, infoLogger } = createLogger('printing');
 import { listShops } from '../../application/queries/listShops';
 import { createPrintJob } from '../../application/commands/createPrintJob';
 import { getJobStatus } from '../../application/queries/getJobStatus';
 
-const parseBody = async (req: http.IncomingMessage) => {
+// ============================================================================
+// Helpers
+// ============================================================================
+
+interface RequestContext {
+  requestId: string;
+  method: string;
+  path: string;
+  ip: string;
+  startTime: number;
+}
+
+const parseBody = async <T>(req: http.IncomingMessage): Promise<T | null> => {
   const chunks: Buffer[] = [];
   for await (const chunk of req) chunks.push(Buffer.from(chunk));
   const raw = Buffer.concat(chunks).toString('utf-8');
@@ -15,46 +29,107 @@ const parseBody = async (req: http.IncomingMessage) => {
   }
 };
 
+function sendJson(res: ServerResponse, status: number, data: unknown, ctx?: RequestContext): void {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  res.writeHead(status);
+
+  let responseData = data;
+  if (!(data instanceof ApiResponse) && !(data && (data as any).success !== undefined)) {
+    responseData = new ApiResponse(status, data, status < 400 ? 'Success' : 'Error');
+  }
+
+  res.end(JSON.stringify(responseData));
+
+  if (ctx) {
+    const duration = Date.now() - ctx.startTime;
+    requestLogger(ctx.method, ctx.path, status, duration, { requestId: ctx.requestId });
+  }
+}
+
+function sendError(
+  res: ServerResponse,
+  status: number,
+  message: string,
+  ctx?: RequestContext,
+  originalError?: any
+): void {
+  const response = new ApiResponse(status, null, message);
+  if (ctx) {
+    errorLogger(message, originalError, { requestId: ctx.requestId });
+  }
+  sendJson(res, status, response, ctx);
+}
+
 export const createServer = () => {
   const server = http.createServer(async (req, res) => {
-    res.setHeader('Content-Type', 'application/json');
-    const url = new URL(req.url || '/', 'http://localhost');
-
-    if (url.pathname === '/health') {
-      res.writeHead(200).end(JSON.stringify({ status: 'ok' }));
+    // Basic CORS for OPTIONS
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.writeHead(204).end();
       return;
     }
 
-    if (req.method === 'GET' && url.pathname === '/shops') {
-      const collegeId = url.searchParams.get('collegeId') || undefined;
-      const shops = await listShops(collegeId);
-      res.writeHead(200).end(JSON.stringify(shops));
-      return;
-    }
+    const ctx: RequestContext = {
+      requestId: Math.random().toString(36).substring(2, 15),
+      method: req.method || 'GET',
+      path: req.url || '/',
+      ip: req.socket.remoteAddress || 'unknown',
+      startTime: Date.now(),
+    };
 
-    if (req.method === 'POST' && url.pathname === '/jobs') {
-      const body = (await parseBody(req)) || {};
-      try {
-        const job = await createPrintJob(body);
-        res.writeHead(201).end(JSON.stringify(job));
-      } catch (e: any) {
-        res.writeHead(400).end(JSON.stringify({ error: e?.message || 'Bad Request' }));
+    try {
+      const url = new URL(req.url || '/', 'http://localhost');
+
+      if (url.pathname === '/health') {
+        sendJson(res, 200, { status: 'ok' }, ctx);
+        return;
       }
-      return;
-    }
 
-    if (req.method === 'GET' && url.pathname.startsWith('/jobs/')) {
-      const id = url.pathname.split('/')[2];
-      const status = await getJobStatus(id);
-      if (!status) {
-        res.writeHead(404).end(JSON.stringify({ error: 'Not found' }));
-      } else {
-        res.writeHead(200).end(JSON.stringify(status));
+      if (req.method === 'GET' && url.pathname === '/shops') {
+        const collegeId = url.searchParams.get('collegeId') || undefined;
+        const shops = await listShops(collegeId);
+        sendJson(res, 200, shops, ctx);
+        return;
       }
-      return;
-    }
 
-    res.writeHead(404).end(JSON.stringify({ error: 'Not found' }));
+      if (req.method === 'POST' && url.pathname === '/jobs') {
+        const body = (await parseBody<any>(req)) || {};
+        try {
+          const job = await createPrintJob(body);
+          sendJson(res, 201, job, ctx);
+        } catch (e: any) {
+          throw new ApiError(400, e?.message || 'Bad Request');
+        }
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname.startsWith('/jobs/')) {
+        const id = url.pathname.split('/')[2];
+        const status = await getJobStatus(id);
+        if (!status) {
+          throw new ApiError(404, 'Not found');
+        } else {
+          sendJson(res, 200, status, ctx);
+        }
+        return;
+      }
+
+      throw new ApiError(404, 'Not found');
+    } catch (error: any) {
+      if (error instanceof ApiError) {
+        const payload: any = { message: error.message };
+        if (error.errors) payload.errors = error.errors;
+        sendJson(res, error.statusCode, payload, ctx);
+        return;
+      }
+      sendError(res, 500, 'Internal Server Error', ctx, error);
+    }
   });
   return server;
 };
@@ -62,7 +137,7 @@ export const createServer = () => {
 export const startServer = (port = 4100) => {
   const server = createServer();
   server.listen(port, () => {
-    console.log(`[printing] listening on http://localhost:${port}`);
+    infoLogger(`[printing] listening on http://localhost:${port}`);
   });
   return server;
 };

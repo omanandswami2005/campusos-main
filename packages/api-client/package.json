@@ -13,7 +13,9 @@
       "types": "./src/index.ts"
     }
   },
-  "files": ["src"],
+  "files": [
+    "src"
+  ],
   "scripts": {
     "build": "tsup src/index.ts --dts --format esm,cjs",
     "dev": "tsup src/index.ts --dts --format esm,cjs --watch",
@@ -21,7 +23,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@campus-os/types": "workspace:*"
+    "@campus-os/types": "workspace:*",
+    "@campus-os/utils": "workspace:*"
   },
   "devDependencies": {
     "@campus-os/config": "workspace:*",

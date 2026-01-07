@@ -1,6 +1,7 @@
 import { createServer, IncomingMessage, ServerResponse } from 'http';
-import { logger } from '../../infrastructure/logging/logger';
+import { requestLogger, errorLogger, infoLogger } from '../../infrastructure/logging/logger';
 import { verifyAccessToken, extractBearerToken } from '../../infrastructure/auth';
+import { ApiError, ApiResponse } from '@campus-os/utils';
 import {
   register,
   login,
@@ -60,6 +61,7 @@ interface RequestContext {
   path: string;
   ip: string;
   user?: AccessTokenPayload;
+  startTime: number;
 }
 
 function generateRequestId(): string {
@@ -99,13 +101,22 @@ function sendJson(res: ServerResponse, status: number, data: unknown, ctx?: Requ
     'Content-Type': 'application/json',
     ...getCorsHeaders(),
   });
-  res.end(JSON.stringify(data));
+
+  // Wrap standard data in ApiResponse if not already done (for backward compatibility if needed, but we enforce standard here)
+  let responseData = data;
+  if (!(data instanceof ApiResponse) && !(data && (data as any).success !== undefined)) {
+    // If passing raw object, wrap it?
+    // User wants "use ApiResponse".
+    // We'll trust logic to pass ApiResponse, or we auto-wrap.
+    // Auto-wrap for convenience:
+    responseData = new ApiResponse(status, data, status < 400 ? 'Success' : 'Error');
+  }
+
+  res.end(JSON.stringify(responseData));
 
   if (ctx) {
-    logger.info(
-      { requestId: ctx.requestId, status, method: ctx.method, path: ctx.path },
-      'Request completed'
-    );
+    const duration = Date.now() - ctx.startTime;
+    requestLogger(ctx.method, ctx.path, status, duration, { requestId: ctx.requestId });
   }
 }
 
@@ -113,10 +124,31 @@ function sendError(
   res: ServerResponse,
   status: number,
   message: string,
-  ctx?: RequestContext
+  ctx?: RequestContext,
+  originalError?: any
 ): void {
   // Escape error message to prevent XSS
-  sendJson(res, status, { error: escapeHtml(message) }, ctx);
+  // Use ApiResponse structure
+  const response = new ApiResponse(status, null, escapeHtml(message));
+
+  if (ctx) {
+    // Log the error before sending
+    errorLogger(message, originalError, {
+      requestId: ctx.requestId,
+      status,
+      method: ctx.method,
+      path: ctx.path,
+    });
+  }
+
+  // sendJson will log the request completion (but we might want to log it as request log too? yes sendJson calls requestLogger)
+  // But requestLogger logs detailed info?
+  // sendJson calls requestLogger. So we just need to ensure error is logged.
+
+  // Actually sendJson calls requestLogger. So we don't need to log request again here.
+  // But we want to log the ERROR content.
+
+  sendJson(res, status, response, ctx);
 }
 
 function sendRateLimitError(
@@ -153,7 +185,7 @@ async function checkRateLimit(
   const result = await limiter.check(identifier);
 
   if (!result.allowed) {
-    logger.warn({ requestId: ctx.requestId, identifier }, 'Rate limit exceeded');
+    infoLogger('Rate limit exceeded', { requestId: ctx.requestId, identifier });
     sendRateLimitError(res, result, ctx);
     return false;
   }
@@ -170,8 +202,7 @@ function validateContentType(
 ): boolean {
   if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
     if (!isSafeContentType(req.headers['content-type'])) {
-      sendError(res, 415, 'Unsupported Content-Type', ctx);
-      return false;
+      throw new ApiError(415, 'Unsupported Content-Type');
     }
   }
   return true;
@@ -185,16 +216,14 @@ function validateCsrf(req: IncomingMessage, res: ServerResponse, ctx: RequestCon
   const headerToken = extractCsrfFromHeader(req.headers as Record<string, string | undefined>);
 
   if (!headerToken || !csrf.verifyToken(headerToken)) {
-    logger.warn({ requestId: ctx.requestId }, 'CSRF validation failed');
-    sendError(res, 403, 'Invalid CSRF token', ctx);
-    return false;
+    infoLogger('CSRF validation failed', { requestId: ctx.requestId });
+    throw new ApiError(403, 'Invalid CSRF token');
   }
 
   // Double submit cookie pattern
   if (cookieToken && cookieToken !== headerToken) {
-    logger.warn({ requestId: ctx.requestId }, 'CSRF cookie mismatch');
-    sendError(res, 403, 'CSRF token mismatch', ctx);
-    return false;
+    infoLogger('CSRF cookie mismatch', { requestId: ctx.requestId });
+    throw new ApiError(403, 'CSRF token mismatch');
   }
 
   return true;
@@ -224,13 +253,13 @@ async function handleRegister(
 
   if (!parsed.success) {
     const errors = parsed.error.errors.map((e) => e.message).join(', ');
-    return sendError(res, 400, errors, ctx);
+    throw new ApiError(400, errors);
   }
 
   const result = await register(parsed.data);
 
   if (!result.success) {
-    return sendError(res, 400, result.error || 'Registration failed', ctx);
+    throw new ApiError(400, result.error || 'Registration failed');
   }
 
   sendJson(res, 201, { user: result.user, tokens: result.tokens }, ctx);
@@ -246,13 +275,13 @@ async function handleLogin(
 
   if (!parsed.success) {
     const errors = parsed.error.errors.map((e) => e.message).join(', ');
-    return sendError(res, 400, errors, ctx);
+    throw new ApiError(400, errors);
   }
 
   const result = await login(parsed.data);
 
   if (!result.success) {
-    return sendError(res, 401, result.error || 'Login failed', ctx);
+    throw new ApiError(401, result.error || 'Login failed');
   }
 
   sendJson(res, 200, { user: result.user, tokens: result.tokens }, ctx);
@@ -268,13 +297,13 @@ async function handleRefresh(
 
   if (!parsed.success) {
     const errors = parsed.error.errors.map((e) => e.message).join(', ');
-    return sendError(res, 400, errors, ctx);
+    throw new ApiError(400, errors);
   }
 
   const result = await refresh(parsed.data.refreshToken);
 
   if (!result.success) {
-    return sendError(res, 401, result.error || 'Token refresh failed', ctx);
+    throw new ApiError(401, result.error || 'Token refresh failed');
   }
 
   sendJson(res, 200, { user: result.user, tokens: result.tokens }, ctx);
@@ -288,7 +317,7 @@ async function handleLogout(
   const body = await parseBody<{ refreshToken?: string }>(req);
 
   if (!body?.refreshToken) {
-    return sendError(res, 400, 'Refresh token is required', ctx);
+    throw new ApiError(400, 'Refresh token is required');
   }
 
   await logout(body.refreshToken);
@@ -301,7 +330,7 @@ async function handleLogoutAll(
   ctx: RequestContext
 ): Promise<void> {
   if (!ctx.user) {
-    return sendError(res, 401, 'Authentication required', ctx);
+    throw new ApiError(401, 'Authentication required');
   }
 
   await logoutAll(ctx.user.sub);
@@ -314,13 +343,13 @@ async function handleGetProfile(
   ctx: RequestContext
 ): Promise<void> {
   if (!ctx.user) {
-    return sendError(res, 401, 'Authentication required', ctx);
+    throw new ApiError(401, 'Authentication required');
   }
 
   const profile = await getProfile(ctx.user.sub);
 
   if (!profile) {
-    return sendError(res, 404, 'User not found', ctx);
+    throw new ApiError(404, 'User not found');
   }
 
   sendJson(res, 200, profile, ctx);
@@ -332,7 +361,7 @@ async function handleUpdateProfile(
   ctx: RequestContext
 ): Promise<void> {
   if (!ctx.user) {
-    return sendError(res, 401, 'Authentication required', ctx);
+    throw new ApiError(401, 'Authentication required');
   }
 
   const body = await parseBody(req);
@@ -340,13 +369,13 @@ async function handleUpdateProfile(
 
   if (!parsed.success) {
     const errors = parsed.error.errors.map((e) => e.message).join(', ');
-    return sendError(res, 400, errors, ctx);
+    throw new ApiError(400, errors);
   }
 
   const result = await updateProfile(ctx.user.sub, parsed.data);
 
   if (!result.success) {
-    return sendError(res, 400, result.error || 'Update failed', ctx);
+    throw new ApiError(400, result.error || 'Update failed');
   }
 
   sendJson(res, 200, result.user, ctx);
@@ -358,7 +387,7 @@ async function handleChangePassword(
   ctx: RequestContext
 ): Promise<void> {
   if (!ctx.user) {
-    return sendError(res, 401, 'Authentication required', ctx);
+    throw new ApiError(401, 'Authentication required');
   }
 
   const body = await parseBody(req);
@@ -366,13 +395,13 @@ async function handleChangePassword(
 
   if (!parsed.success) {
     const errors = parsed.error.errors.map((e) => e.message).join(', ');
-    return sendError(res, 400, errors, ctx);
+    throw new ApiError(400, errors);
   }
 
   const result = await changePassword(ctx.user.sub, parsed.data);
 
   if (!result.success) {
-    return sendError(res, 400, result.error || 'Password change failed', ctx);
+    throw new ApiError(400, result.error || 'Password change failed');
   }
 
   sendJson(res, 200, { message: 'Password changed successfully' }, ctx);
@@ -388,7 +417,7 @@ async function handleForgotPassword(
 
   if (!parsed.success) {
     const errors = parsed.error.errors.map((e) => e.message).join(', ');
-    return sendError(res, 400, errors, ctx);
+    throw new ApiError(400, errors);
   }
 
   const result = await requestPasswordReset(parsed.data.email);
@@ -399,7 +428,6 @@ async function handleForgotPassword(
     200,
     {
       message: 'If the email exists, a password reset link has been sent',
-      // In development, include the token for testing
       ...(process.env.NODE_ENV !== 'production' && result.resetToken
         ? { resetToken: result.resetToken }
         : {}),
@@ -418,13 +446,13 @@ async function handleResetPassword(
 
   if (!parsed.success) {
     const errors = parsed.error.errors.map((e) => e.message).join(', ');
-    return sendError(res, 400, errors, ctx);
+    throw new ApiError(400, errors);
   }
 
   const result = await resetPassword(parsed.data.token, parsed.data.newPassword);
 
   if (!result.success) {
-    return sendError(res, 400, result.error || 'Password reset failed', ctx);
+    throw new ApiError(400, result.error || 'Password reset failed');
   }
 
   sendJson(res, 200, { message: 'Password reset successfully' }, ctx);
@@ -436,7 +464,7 @@ async function handleVerifyToken(
   ctx: RequestContext
 ): Promise<void> {
   if (!ctx.user) {
-    return sendError(res, 401, 'Invalid token', ctx);
+    throw new ApiError(401, 'Invalid token');
   }
 
   sendJson(
@@ -483,9 +511,10 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     method: req.method || 'GET',
     path: req.url || '/',
     ip: getClientIp(req),
+    startTime: Date.now(),
   };
 
-  logger.debug(ctx, 'Incoming request');
+  // logger.debug(ctx, 'Incoming request'); // Remove debug log or use infoLogger if needed, but requestLogger handles completion
 
   // HTTPS enforcement in production
   if (IS_PRODUCTION && !enforceHttps(req, res)) {
@@ -499,25 +528,21 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     return;
   }
 
-  // Validate Content-Type for POST/PUT requests
-  if (!validateContentType(req, res, ctx)) {
-    return;
-  }
-
-  // CSRF validation (if enabled)
-  if (!validateCsrf(req, res, ctx)) {
-    return;
-  }
-
-  // Parse URL
-  const url = new URL(req.url || '/', `http://localhost:${PORT}`);
-  const path = url.pathname;
-
-  // Authenticate if token present
-  ctx.user = (await authenticate(req)) ?? undefined;
-
-  // Route requests with rate limiting
   try {
+    // Validate Content-Type
+    validateContentType(req, res, ctx);
+
+    // CSRF validation (if enabled)
+    validateCsrf(req, res, ctx);
+
+    // Parse URL
+    const url = new URL(req.url || '/', `http://localhost:${PORT}`);
+    const path = url.pathname;
+
+    // Authenticate if token present
+    ctx.user = (await authenticate(req)) ?? undefined;
+
+    // Route requests with rate limiting
     // Health check (no rate limit)
     if (path === '/health' && req.method === 'GET') {
       return handleHealthCheck(req, res, ctx);
@@ -584,10 +609,21 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     }
 
     // 404
-    sendError(res, 404, 'Not found', ctx);
+    throw new ApiError(404, 'Not found');
   } catch (error) {
-    logger.error({ requestId: ctx.requestId, error }, 'Request handler error');
-    sendError(res, 500, 'Internal server error', ctx);
+    if (error instanceof ApiError) {
+      // Use standard ApiResponse for error
+      const payload: any = {
+        message: error.message,
+      };
+      if (error.errors && error.errors.length) {
+        payload.errors = error.errors;
+      }
+      sendJson(res, error.statusCode, payload, ctx);
+      return;
+    }
+
+    sendError(res, 500, 'Internal server error', ctx, error);
   }
 }
 
@@ -599,24 +635,24 @@ export function startServer(): void {
   const server = createServer(handleRequest);
 
   server.listen(PORT, () => {
-    logger.info({ port: PORT }, '🔐 Auth service started');
-    logger.info(`   Health: http://localhost:${PORT}/health`);
-    logger.info(`   API:    http://localhost:${PORT}/auth/*`);
-    logger.info(`   Security: Rate limiting ${process.env.REDIS_URL ? '(Redis)' : '(in-memory)'}`);
-    logger.info(`   HTTPS: ${IS_PRODUCTION ? 'enforced' : 'disabled (dev)'}`);
-    logger.info(`   CSRF: ${CSRF_ENABLED ? 'enabled' : 'disabled'}`);
+    infoLogger('🔐 Auth service started', { port: PORT });
+    infoLogger(`   Health: http://localhost:${PORT}/health`);
+    infoLogger(`   API:    http://localhost:${PORT}/auth/*`);
+    infoLogger(`   Security: Rate limiting ${process.env.REDIS_URL ? '(Redis)' : '(in-memory)'}`);
+    infoLogger(`   HTTPS: ${IS_PRODUCTION ? 'enforced' : 'disabled (dev)'}`);
+    infoLogger(`   CSRF: ${CSRF_ENABLED ? 'enabled' : 'disabled'}`);
   });
 
   // Graceful shutdown
   const shutdown = async () => {
-    logger.info('Shutting down auth service...');
+    infoLogger('Shutting down auth service...');
 
     // Close Redis connection
     const { closeRedis } = await import('@campus-os/security');
     await closeRedis();
 
     server.close(() => {
-      logger.info('Auth service stopped');
+      infoLogger('Auth service stopped');
       process.exit(0);
     });
   };

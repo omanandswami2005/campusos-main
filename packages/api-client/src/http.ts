@@ -17,11 +17,13 @@ export interface HttpOptions {
   onError?: (error: ApiError) => void;
 }
 
+// Re-export or redefine to match utils, or extend
 export interface ApiError {
   status: number;
-  statusText: string;
+  statusText?: string;
   message: string;
   code?: string;
+  errors?: any[];
 }
 
 // ============================================================================
@@ -54,13 +56,39 @@ export class ApiClient {
       throw new Error('Unauthorized');
     }
 
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Request failed: ${res.status} ${res.statusText} - ${text}`);
+    if (res.status === 204) return undefined as unknown as T;
+
+    // Try to parse JSON
+    let body: any;
+    const text = await res.text();
+    try {
+      body = text ? JSON.parse(text) : null;
+    } catch {
+      // If not JSON, but error status, throw text
+      if (!res.ok) throw new Error(`Request failed: ${res.status} ${res.statusText} - ${text}`);
+      // If OK but not JSON, return strict text? But T implies data.
+      return text as unknown as T;
     }
 
-    if (res.status === 204) return undefined as unknown as T;
-    return (await res.json()) as T;
+    // Check for ApiResponse structure
+    const isApiResponse = body && typeof body === 'object' && typeof body.success === 'boolean';
+
+    if (!res.ok) {
+      if (isApiResponse && !body.success) {
+        throw new Error(body.message || 'Request failed');
+      }
+      throw new Error(body.error || body.message || `Request failed: ${res.status}`);
+    }
+
+    if (isApiResponse) {
+      if (!body.success) {
+        // Logical error despite 200 OK? Should not happen with standard usage but safety check
+        throw new Error(body.message || 'Request failed');
+      }
+      return body.data as T;
+    }
+
+    return body as T;
   }
 }
 
@@ -94,25 +122,51 @@ export class HttpClient {
       throw new Error('Unauthorized');
     }
 
+    if (res.status === 204) return undefined as unknown as T;
+
+    let body: any;
+    const text = await res.text();
+    try {
+      body = text ? JSON.parse(text) : null;
+    } catch {
+      if (!res.ok) {
+        const message = `${method} ${path} failed: ${res.status} ${res.statusText} - ${text}`;
+        const error: ApiError = { status: res.status, statusText: res.statusText, message };
+        this.opts.onError?.(error);
+        throw new Error(message);
+      }
+      return text as unknown as T;
+    }
+
+    const isApiResponse = body && typeof body === 'object' && typeof body.success === 'boolean';
+
     if (!res.ok) {
       let message = `${method} ${path} failed: ${res.status}`;
-      try {
-        const data = await res.json();
-        message = data.error || data.message || message;
-      } catch {
-        // Ignore JSON parse error
+      let detailedErrors: any[] | undefined;
+
+      if (isApiResponse && !body.success) {
+        message = body.message || message;
+        detailedErrors = body.errors; // Capture errors from ApiResponse
+      } else {
+        message = body.error || body.message || message;
       }
+
       const error: ApiError = {
         status: res.status,
         statusText: res.statusText,
         message,
+        errors: detailedErrors,
       };
       this.opts.onError?.(error);
       throw new Error(message);
     }
 
-    if (res.status === 204) return undefined as unknown as T;
-    return (await res.json()) as T;
+    // Success case
+    if (isApiResponse) {
+      return body.data as T;
+    }
+
+    return body as T;
   }
 
   async get<T>(path: string): Promise<T> {
