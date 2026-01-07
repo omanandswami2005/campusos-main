@@ -2,14 +2,6 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "baseUrl": "."
-  },
-  "include": ["src", "vite.config.ts", "capacitor.config.ts"],
-  "exclude": ["node_modules"]
-}
-{
-  "extends": "../../packages/config/tsconfig/base.json",
-  "compilerOptions": {
     "baseUrl": ".",
     "paths": {
       "@campus-os/types": ["../../packages/types/src"],
@@ -18,6 +10,6 @@
       "@campus-os/api-client": ["../../packages/api-client/src"]
     }
   },
-  "include": ["src", "vite-env.d.ts"],
+  "include": ["src", "vite.config.ts", "capacitor.config.ts", "vite-env.d.ts"],
   "exclude": ["node_modules"]
 }
