@@ -1,24 +1,47 @@
 {
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "jsx": "react-jsx",
-    "baseUrl": "."
-  },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules"]
-}
-{
   "extends": "../../packages/config/tsconfig/base.json",
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@campus-os/types": ["../../packages/types/src"],
-      "@campus-os/utils": ["../../packages/utils/src"],
-      "@campus-os/ui": ["../../packages/ui/src"],
-      "@campus-os/api-client": ["../../packages/api-client/src"]
+      "@campus-os/types": [
+        "../../packages/types/src"
+      ],
+      "@campus-os/utils": [
+        "../../packages/utils/src"
+      ],
+      "@campus-os/ui": [
+        "../../packages/ui/src"
+      ],
+      "@campus-os/api-client": [
+        "../../packages/api-client/src"
+      ]
     },
-    "types": ["node", "react", "react-dom"]
+    "types": [
+      "node",
+      "react",
+      "react-dom"
+    ],
+    "allowJs": true,
+    "noEmit": true,
+    "incremental": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
-  "include": ["next-env.d.ts", "src/**/*"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "app/**/*",
+    "src/**/*",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

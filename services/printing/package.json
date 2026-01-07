@@ -1,20 +1,17 @@
 {
-  "name": "@campus-os/api-client",
+  "name": "@campus-os/service-printing",
   "version": "0.1.0",
-  "private": false,
+  "private": true,
   "type": "module",
-  "main": "dist/index.cjs",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "files": ["dist"],
   "scripts": {
+    "dev": "tsx src/index.ts",
     "build": "tsup src/index.ts --dts --format esm,cjs",
-    "dev": "tsup src/index.ts --dts --format esm,cjs --watch",
-    "lint": "eslint .",
+    "lint": "eslint src --ext .ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@campus-os/types": "workspace:*"
+    "@campus-os/types": "workspace:*",
+    "@campus-os/utils": "workspace:*"
   },
   "devDependencies": {
     "@campus-os/config": "workspace:*",
@@ -22,6 +19,7 @@
     "eslint": "^8.57.0",
     "prettier": "^3.2.5",
     "tsup": "^8.0.1",
+    "tsx": "^4.7.0",
     "typescript": "^5.6.3"
   }
 }
