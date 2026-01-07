@@ -1,0 +1,7 @@
+{
+  "name": "@campus-os/config",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "files": ["eslint/index.cjs", "prettier/index.cjs", "tsconfig/base.json"]
+}

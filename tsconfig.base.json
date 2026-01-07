@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "resolveJsonModule": true,
+    "allowJs": false,
+    "checkJs": false,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@campus-os/types": ["packages/types/src"],
+      "@campus-os/utils": ["packages/utils/src"],
+      "@campus-os/ui": ["packages/ui/src"],
+      "@campus-os/api-client": ["packages/api-client/src"]
+    }
+  }
+}

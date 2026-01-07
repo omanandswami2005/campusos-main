@@ -1,0 +1,36 @@
+name: web
+
+on:
+  push:
+    paths:
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'turbo.json'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+  pull_request:
+    paths:
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'turbo.json'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - name: Install deps
+        run: pnpm install --ignore-scripts
+      - name: Build web
+        run: pnpm turbo run build --filter=@campus-os/web

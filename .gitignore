@@ -1,0 +1,22 @@
+# Node
+node_modules/
+dist/
+build/
+.turbo/
+.next/
+.eslintcache
+.DS_Store
+
+# Env
+.env
+.env.*
+
+# Capacitor / Native
+android/
+ios/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
