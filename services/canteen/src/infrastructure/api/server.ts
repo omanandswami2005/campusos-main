@@ -16,7 +16,11 @@ const parseBody = async (req: http.IncomingMessage) => {
   for await (const chunk of req) chunks.push(Buffer.from(chunk));
   const raw = Buffer.concat(chunks).toString('utf-8');
   if (!raw) return null;
-  try { return JSON.parse(raw); } catch { return null; }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 };
 
 const extractToken = (req: http.IncomingMessage): string | null => {
@@ -104,13 +108,21 @@ export const createServer = () => {
       return;
     }
 
-    if (req.method === 'POST' && url.pathname.startsWith('/orders/') && url.pathname.endsWith('/status')) {
+    if (
+      req.method === 'POST' &&
+      url.pathname.startsWith('/orders/') &&
+      url.pathname.endsWith('/status')
+    ) {
       const auth = requireAuth(req, res);
       if (!auth) return;
       const [, , id] = url.pathname.split('/');
       const body = (await parseBody(req)) || {};
       try {
-        const updated = await updateOrderStatus({ orderId: id, nextStatus: body.nextStatus, otpProvided: body.otp });
+        const updated = await updateOrderStatus({
+          orderId: id,
+          nextStatus: body.nextStatus,
+          otpProvided: body.otp,
+        });
         res.writeHead(200).end(JSON.stringify(updated));
       } catch (e: any) {
         res.writeHead(400).end(JSON.stringify({ error: e?.message || 'Bad Request' }));
@@ -147,7 +159,10 @@ export const createServer = () => {
       if (!auth) return;
       const body = (await parseBody(req)) || {};
       try {
-        const poll = await createPoll({ collegeId: auth.email.split('@')[1] || 'college-a', ...body });
+        const poll = await createPoll({
+          collegeId: auth.email.split('@')[1] || 'college-a',
+          ...body,
+        });
         res.writeHead(201).end(JSON.stringify(poll));
       } catch (e: any) {
         res.writeHead(400).end(JSON.stringify({ error: e?.message || 'Bad Request' }));
@@ -177,7 +192,6 @@ export const createServer = () => {
 export const startServer = (port = 4000) => {
   const server = createServer();
   server.listen(port, () => {
-    // eslint-disable-next-line no-console
     console.log(`[canteen] listening on http://localhost:${port}`);
   });
   return server;

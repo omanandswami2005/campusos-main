@@ -28,7 +28,7 @@ const menuSeed: MenuItem[] = [
     category: 'beverages',
     available: true,
     imageUrl: '',
-    collegeId: 'college-a'
+    collegeId: 'college-a',
   },
   {
     id: 'item-samosa',
@@ -38,7 +38,7 @@ const menuSeed: MenuItem[] = [
     category: 'snacks',
     available: true,
     imageUrl: '',
-    collegeId: 'college-a'
+    collegeId: 'college-a',
   },
   {
     id: 'item-sandwich',
@@ -48,8 +48,8 @@ const menuSeed: MenuItem[] = [
     category: 'snacks',
     available: true,
     imageUrl: '',
-    collegeId: 'college-a'
-  }
+    collegeId: 'college-a',
+  },
 ];
 
 const offerSeed: PromotionalOffer[] = [
@@ -65,8 +65,8 @@ const offerSeed: PromotionalOffer[] = [
     usageLimit: 1000,
     usedCount: 0,
     active: true,
-    collegeId: 'college-a'
-  }
+    collegeId: 'college-a',
+  },
 ];
 
 const userSeed: (User & { password: string })[] = [
@@ -76,7 +76,7 @@ const userSeed: (User & { password: string })[] = [
     email: 'demo@college.edu',
     collegeId: 'college-a',
     role: 'student',
-    password: 'demo123'
+    password: 'demo123',
   },
   {
     id: 'user-admin',
@@ -84,8 +84,8 @@ const userSeed: (User & { password: string })[] = [
     email: 'admin@college.edu',
     collegeId: 'college-a',
     role: 'admin',
-    password: 'admin123'
-  }
+    password: 'admin123',
+  },
 ];
 
 export const memory: MemoryState = {
@@ -94,5 +94,5 @@ export const memory: MemoryState = {
   orders: new Map(),
   users: new Map(userSeed.map((u) => [u.email, u] as const)),
   polls: new Map(),
-  userVotes: new Map()
+  userVotes: new Map(),
 };

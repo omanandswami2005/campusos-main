@@ -9,9 +9,9 @@ interface TokenPayload {
 // Simple JWT-like token (not cryptographic, for demo)
 export const generateToken = (payload: TokenPayload): string => {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
-  const body = Buffer.from(JSON.stringify({ ...payload, iat: Math.floor(Date.now() / 1000) })).toString(
-    'base64url'
-  );
+  const body = Buffer.from(
+    JSON.stringify({ ...payload, iat: Math.floor(Date.now() / 1000) })
+  ).toString('base64url');
   const signature = Buffer.from(JWT_SECRET).toString('base64url').substring(0, 10);
   return `${header}.${body}.${signature}`;
 };

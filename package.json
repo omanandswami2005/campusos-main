@@ -4,16 +4,59 @@
   "packageManager": "pnpm@9.0.0",
   "scripts": {
     "dev": "turbo run dev --parallel",
+    "dev:web": "pnpm --filter @campus-os/web dev",
+    "dev:mobile": "pnpm --filter @campus-os/mobile dev",
+    "dev:auth": "pnpm --filter @campus-os/service-auth dev",
+    "dev:canteen": "pnpm --filter @campus-os/service-canteen dev",
+    "dev:printing": "pnpm --filter @campus-os/service-printing dev",
+    "dev:events": "pnpm --filter @campus-os/service-events dev",
+    "dev:services": "pnpm --filter \"@campus-os/service-*\" dev",
+    "dev:apps": "pnpm --filter @campus-os/web --filter @campus-os/mobile dev",
+    "dev:full": "turbo run dev --parallel --output-logs=full",
     "build": "turbo run build",
     "lint": "turbo run lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "release": "turbo run build"
+    "release": "turbo run build",
+    "db:generate": "pnpm --filter @campus-os/database db:generate",
+    "db:push": "pnpm --filter @campus-os/database db:push",
+    "db:migrate": "pnpm --filter @campus-os/database db:migrate",
+    "db:seed": "pnpm --filter @campus-os/database db:seed",
+    "db:studio": "pnpm --filter @campus-os/database db:studio",
+    "prepare": "husky && pnpm db:generate"
   },
   "devDependencies": {
-    "eslint": "^8.57.0",
+    "@commitlint/cli": "^20.3.0",
+    "@commitlint/config-conventional": "^20.3.0",
+    "@eslint/js": "^9.39.2",
+    "dotenv-cli": "^7.4.2",
+    "esbuild": "0.27.2",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "prettier": "^3.2.5",
     "turbo": "^2.1.1",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.52.0"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix --max-warnings=-1",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml,css,scss}": [
+      "prettier --write"
+    ]
+  },
+  "pnpm": {
+    "overrides": {
+      "esbuild": "0.27.2"
+    }
   }
 }

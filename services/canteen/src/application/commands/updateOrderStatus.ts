@@ -2,18 +2,17 @@ import { memory } from '../state/memory';
 
 export type UpdateStatusInput = {
   orderId: string;
-  nextStatus:
-    | 'confirmed'
-    | 'preparing'
-    | 'out-for-delivery'
-    | 'delivered'
-    | 'cancelled';
+  nextStatus: 'confirmed' | 'preparing' | 'out-for-delivery' | 'delivered' | 'cancelled';
   otpProvided?: string;
 };
 
 const genOtp = () => String(Math.floor(1000 + Math.random() * 9000));
 
-export const updateOrderStatus = async ({ orderId, nextStatus, otpProvided }: UpdateStatusInput) => {
+export const updateOrderStatus = async ({
+  orderId,
+  nextStatus,
+  otpProvided,
+}: UpdateStatusInput) => {
   const order = memory.orders.get(orderId);
   if (!order) throw new Error('Order not found');
 

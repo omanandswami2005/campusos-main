@@ -10,12 +10,12 @@ export interface CreateOrderInput {
   items: { menuItemId: string; quantity: number }[];
 }
 
-export interface LoginInput {
+export interface CanteenLoginInput {
   email: string;
   password: string;
 }
 
-export interface LoginResponse {
+export interface CanteenLoginResponse {
   token: string;
   user: { id: string; name: string; email: string; collegeId: string; role: string };
 }
@@ -54,8 +54,8 @@ export class CanteenClient {
     return (await res.json()) as T;
   }
 
-  login(input: LoginInput) {
-    return this.request<LoginResponse>('POST', '/login', input);
+  login(input: CanteenLoginInput) {
+    return this.request<CanteenLoginResponse>('POST', '/login', input);
   }
 
   listMenu(collegeId?: string) {

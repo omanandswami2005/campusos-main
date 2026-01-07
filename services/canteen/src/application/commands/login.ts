@@ -19,6 +19,12 @@ export const login = async (input: LoginInput): Promise<LoginResponse> => {
   const token = generateToken({ userId: user.id, email: user.email, role: user.role });
   return {
     token,
-    user: { id: user.id, name: user.name, email: user.email, collegeId: user.collegeId, role: user.role }
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      collegeId: user.collegeId,
+      role: user.role,
+    },
   };
 };

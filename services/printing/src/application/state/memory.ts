@@ -3,7 +3,7 @@ import type { PrintJob, PrintShop } from '@campus-os/types';
 // Simple in-memory store with seeded shops for demo usage.
 export const memory: { shops: Map<string, PrintShop>; jobs: Map<string, PrintJob> } = {
   shops: new Map<string, PrintShop>(),
-  jobs: new Map<string, PrintJob>()
+  jobs: new Map<string, PrintJob>(),
 };
 
 memory.shops.set('shop-1', {
@@ -16,7 +16,7 @@ memory.shops.set('shop-1', {
   lng: 77.5946,
   pricePerPageBW: 50,
   pricePerPageColor: 250,
-  resourceStatus: { bwAvailable: true, colorAvailable: true, a3Available: true, a4Available: true }
+  resourceStatus: { bwAvailable: true, colorAvailable: true, a3Available: true, a4Available: true },
 });
 
 memory.shops.set('shop-2', {
@@ -29,5 +29,10 @@ memory.shops.set('shop-2', {
   lng: 77.6245,
   pricePerPageBW: 60,
   pricePerPageColor: 280,
-  resourceStatus: { bwAvailable: true, colorAvailable: false, a3Available: false, a4Available: true }
+  resourceStatus: {
+    bwAvailable: true,
+    colorAvailable: false,
+    a3Available: false,
+    a4Available: true,
+  },
 });

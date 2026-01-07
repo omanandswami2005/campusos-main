@@ -7,8 +7,9 @@ export const getJobStatus = async (jobId: string): Promise<PrintJobStatus | null
   return {
     jobId: job.id,
     status: job.status,
-    estimatedReadyTime: job.status === 'queued' || job.status === 'printing'
-      ? new Date(Date.now() + 5 * 60 * 1000).toISOString()
-      : undefined
+    estimatedReadyTime:
+      job.status === 'queued' || job.status === 'printing'
+        ? new Date(Date.now() + 5 * 60 * 1000).toISOString()
+        : undefined,
   };
 };

@@ -8,7 +8,11 @@ const parseBody = async (req: http.IncomingMessage) => {
   for await (const chunk of req) chunks.push(Buffer.from(chunk));
   const raw = Buffer.concat(chunks).toString('utf-8');
   if (!raw) return null;
-  try { return JSON.parse(raw); } catch { return null; }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 };
 
 export const createServer = () => {
@@ -58,7 +62,6 @@ export const createServer = () => {
 export const startServer = (port = 4100) => {
   const server = createServer();
   server.listen(port, () => {
-    // eslint-disable-next-line no-console
     console.log(`[printing] listening on http://localhost:${port}`);
   });
   return server;

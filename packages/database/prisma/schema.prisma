@@ -1,0 +1,542 @@
+// Prisma Schema for Campus OS
+// Database: PostgreSQL (Neon)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============== AUTH & USERS ==============
+
+enum Role {
+  STUDENT
+  STAFF
+  COORDINATOR
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  name          String
+  avatarUrl     String?
+  role          Role      @default(STUDENT)
+  collegeId     String
+  isActive      Boolean   @default(true)
+  emailVerified Boolean   @default(false)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime?
+
+  // Relations
+  college              College              @relation(fields: [collegeId], references: [id])
+  refreshTokens        RefreshToken[]
+  clubCoordinator      Club[]               @relation("ClubCoordinator")
+  clubMemberships      ClubMember[]
+  eventRegistrations   EventRegistration[]
+  eventAttendance      EventAttendance[]
+  eventFeedback        EventFeedback[]
+  certificates         Certificate[]
+  notifications        Notification[]
+  canteenOrders        CanteenOrder[]
+  canteenVotes         MessVote[]
+  printJobs            PrintJob[]
+  
+  @@index([email])
+  @@index([collegeId])
+  @@map("users")
+}
+
+model RefreshToken {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  userId      String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  revokedAt   DateTime?
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([token])
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model College {
+  id          String   @id @default(cuid())
+  name        String
+  code        String   @unique
+  domain      String?  // For email domain validation
+  logoUrl     String?
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  users       User[]
+  clubs       Club[]
+  events      Event[]
+  menuItems   MenuItem[]
+  printShops  PrintShop[]
+  
+  @@map("colleges")
+}
+
+// ============== CLUBS & EVENTS ==============
+
+enum ClubStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+model Club {
+  id            String     @id @default(cuid())
+  name          String
+  description   String?
+  logoUrl       String?
+  coverImageUrl String?
+  email         String?
+  category      String
+  status        ClubStatus @default(PENDING)
+  memberCount   Int        @default(0)
+  foundedDate   DateTime?
+  socialLinks   Json?      // { platform: string, url: string }[]
+  
+  collegeId     String
+  coordinatorId String
+  approvedById  String?
+  approvedAt    DateTime?
+  rejectionReason String?
+  
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  
+  // Relations
+  college       College    @relation(fields: [collegeId], references: [id])
+  coordinator   User       @relation("ClubCoordinator", fields: [coordinatorId], references: [id])
+  members       ClubMember[]
+  events        Event[]
+  
+  @@index([collegeId])
+  @@index([coordinatorId])
+  @@index([status])
+  @@map("clubs")
+}
+
+model ClubMember {
+  id        String   @id @default(cuid())
+  clubId    String
+  userId    String
+  role      String   @default("member") // member, moderator
+  joinedAt  DateTime @default(now())
+  
+  club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([clubId, userId])
+  @@map("club_members")
+}
+
+enum EventStatus {
+  DRAFT
+  PENDING_APPROVAL
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Event {
+  id                   String         @id @default(cuid())
+  title                String
+  description          String?
+  startDate            DateTime
+  endDate              DateTime
+  location             String?
+  venue                String?
+  imageUrl             String?
+  tags                 String[]
+  rules                String[]
+  category             String
+  capacity             Int
+  registeredCount      Int            @default(0)
+  isPublic             Boolean        @default(true)
+  registrationDeadline DateTime
+  
+  status               EventStatus    @default(DRAFT)
+  approvalStatus       ApprovalStatus @default(PENDING)
+  approvedById         String?
+  approvedAt           DateTime?
+  rejectionReason      String?
+  
+  collegeId            String
+  clubId               String?
+  organizerId          String
+  
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  
+  // Relations
+  college              College            @relation(fields: [collegeId], references: [id])
+  club                 Club?              @relation(fields: [clubId], references: [id])
+  registrations        EventRegistration[]
+  attendance           EventAttendance[]
+  feedback             EventFeedback[]
+  certificates         Certificate[]
+  
+  @@index([collegeId])
+  @@index([clubId])
+  @@index([status])
+  @@index([startDate])
+  @@map("events")
+}
+
+enum RegistrationStatus {
+  REGISTERED
+  CANCELLED
+  ATTENDED
+}
+
+model EventRegistration {
+  id           String             @id @default(cuid())
+  eventId      String
+  userId       String
+  ticketNumber String             @unique
+  status       RegistrationStatus @default(REGISTERED)
+  registeredAt DateTime           @default(now())
+  cancelledAt  DateTime?
+  
+  event        Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+  @@map("event_registrations")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+model EventAttendance {
+  id           String           @id @default(cuid())
+  eventId      String
+  userId       String
+  status       AttendanceStatus
+  checkInTime  DateTime?
+  checkOutTime DateTime?
+  markedById   String
+  
+  createdAt    DateTime         @default(now())
+  
+  event        Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([eventId, userId])
+  @@map("event_attendance")
+}
+
+model EventFeedback {
+  id           String   @id @default(cuid())
+  eventId      String
+  userId       String
+  rating       Int      // 1-5
+  comment      String?
+  categories   Json     // { organization, content, venue, overall }
+  isAnonymous  Boolean  @default(false)
+  submittedAt  DateTime @default(now())
+  
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([eventId, userId])
+  @@map("event_feedback")
+}
+
+enum CertificateType {
+  PARTICIPATION
+  WINNER
+  RUNNER_UP
+  ORGANIZER
+}
+
+model Certificate {
+  id                String          @id @default(cuid())
+  certificateNumber String          @unique
+  eventId           String
+  userId            String
+  type              CertificateType
+  position          String?
+  studentName       String
+  eventName         String
+  eventDate         DateTime
+  issuedAt          DateTime        @default(now())
+  downloadUrl       String?
+  
+  event             Event           @relation(fields: [eventId], references: [id])
+  user              User            @relation(fields: [userId], references: [id])
+  
+  @@unique([eventId, userId, type])
+  @@index([certificateNumber])
+  @@map("certificates")
+}
+
+// ============== NOTIFICATIONS ==============
+
+enum NotificationType {
+  REGISTRATION_CONFIRMATION
+  EVENT_UPDATE
+  EVENT_CANCELLED
+  EVENT_REMINDER
+  CLUB_APPROVED
+  CLUB_REJECTED
+  ATTENDANCE_MARKED
+  CERTIFICATE_READY
+  ORDER_STATUS
+  PRINT_JOB_STATUS
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  data      Json?            // Additional metadata (eventId, orderId, etc.)
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  readAt    DateTime?
+  
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ============== CANTEEN ==============
+
+enum MenuCategory {
+  BEVERAGES
+  SNACKS
+  MEALS
+  DESSERTS
+  SPECIALS
+}
+
+model MenuItem {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  priceCents  Int
+  category    MenuCategory
+  imageUrl    String?
+  available   Boolean      @default(true)
+  collegeId   String
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  college     College      @relation(fields: [collegeId], references: [id])
+  orderItems  OrderItem[]
+  
+  @@index([collegeId])
+  @@index([category])
+  @@map("menu_items")
+}
+
+model PromotionalOffer {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  description  String
+  discountType String   // percentage, flat
+  value        Int      // percentage value or cents
+  minOrderCents Int     @default(0)
+  maxUses      Int?
+  usedCount    Int      @default(0)
+  validFrom    DateTime
+  validUntil   DateTime
+  isActive     Boolean  @default(true)
+  
+  createdAt    DateTime @default(now())
+  
+  @@index([code])
+  @@map("promotional_offers")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  ONLINE
+  WALLET
+}
+
+model CanteenOrder {
+  id               String        @id @default(cuid())
+  userId           String
+  collegeId        String
+  status           OrderStatus   @default(PENDING)
+  subtotalCents    Int
+  discountCents    Int           @default(0)
+  totalCents       Int
+  deliveryLocation String
+  paymentMethod    PaymentMethod
+  appliedOffer     String?
+  estimatedReadyAt DateTime?
+  
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  
+  user             User          @relation(fields: [userId], references: [id])
+  items            OrderItem[]
+  
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("canteen_orders")
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  orderId    String
+  menuItemId String
+  quantity   Int
+  priceCents Int
+  
+  order      CanteenOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem   MenuItem     @relation(fields: [menuItemId], references: [id])
+  
+  @@map("order_items")
+}
+
+model MessVotingPoll {
+  id          String    @id @default(cuid())
+  question    String
+  options     String[]
+  collegeId   String
+  isActive    Boolean   @default(true)
+  startsAt    DateTime
+  endsAt      DateTime
+  
+  createdAt   DateTime  @default(now())
+  
+  votes       MessVote[]
+  
+  @@map("mess_voting_polls")
+}
+
+model MessVote {
+  id        String         @id @default(cuid())
+  pollId    String
+  userId    String
+  option    String
+  votedAt   DateTime       @default(now())
+  
+  poll      MessVotingPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id])
+  
+  @@unique([pollId, userId])
+  @@map("mess_votes")
+}
+
+// ============== PRINTING ==============
+
+model PrintShop {
+  id          String    @id @default(cuid())
+  name        String
+  location    String
+  collegeId   String
+  isOpen      Boolean   @default(true)
+  pricePerPageCents Int @default(200)
+  colorPricePerPageCents Int @default(500)
+  openTime    String?   // "09:00"
+  closeTime   String?   // "18:00"
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  college     College   @relation(fields: [collegeId], references: [id])
+  printJobs   PrintJob[]
+  
+  @@index([collegeId])
+  @@map("print_shops")
+}
+
+enum PrintJobStatus {
+  PENDING
+  PROCESSING
+  READY
+  COLLECTED
+  CANCELLED
+}
+
+model PrintJob {
+  id            String         @id @default(cuid())
+  userId        String
+  shopId        String
+  fileName      String
+  fileUrl       String?
+  pageCount     Int
+  copies        Int            @default(1)
+  isColor       Boolean        @default(false)
+  isDoubleSided Boolean        @default(false)
+  status        PrintJobStatus @default(PENDING)
+  totalCents    Int
+  notes         String?
+  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  completedAt   DateTime?
+  
+  user          User           @relation(fields: [userId], references: [id])
+  shop          PrintShop      @relation(fields: [shopId], references: [id])
+  
+  @@index([userId])
+  @@index([shopId])
+  @@index([status])
+  @@map("print_jobs")
+}
+
+// ============== AUDIT LOG ==============
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  resource   String
+  resourceId String?
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

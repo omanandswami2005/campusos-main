@@ -37,7 +37,7 @@ export const createPrintJob = async (input: CreatePrintJobInput): Promise<PrintJ
     otp,
     status: 'queued',
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
   };
   memory.jobs.set(id, job);
   return job;

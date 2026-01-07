@@ -19,7 +19,7 @@ export const createPoll = async (input: CreatePollInput): Promise<MessVotingPoll
     votes: Object.fromEntries(input.options.map((o) => [o, 0])),
     active: true,
     startDate: now.toISOString(),
-    endDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    endDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
   };
   memory.polls.set(id, poll);
   return poll;

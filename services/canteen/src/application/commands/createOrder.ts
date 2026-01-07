@@ -25,7 +25,7 @@ export const createOrder = async (input: CreateOrderInput): Promise<Order> => {
       menuItemId,
       menuItemName: item.name,
       quantity,
-      priceCents: item.priceCents
+      priceCents: item.priceCents,
     };
   });
 
@@ -40,11 +40,14 @@ export const createOrder = async (input: CreateOrderInput): Promise<Order> => {
       throw new Error('Offer not active');
     }
     if (offer.collegeId !== input.collegeId) throw new Error('Offer not valid for college');
-    if (offer.minOrderValue && subtotalCents < offer.minOrderValue) throw new Error('Order below minimum');
-    if (offer.usageLimit && offer.usedCount >= offer.usageLimit) throw new Error('Offer usage exceeded');
-    discountCents = offer.discountType === 'percentage'
-      ? Math.floor((subtotalCents * offer.discountValue) / 100)
-      : offer.discountValue;
+    if (offer.minOrderValue && subtotalCents < offer.minOrderValue)
+      throw new Error('Order below minimum');
+    if (offer.usageLimit && offer.usedCount >= offer.usageLimit)
+      throw new Error('Offer usage exceeded');
+    discountCents =
+      offer.discountType === 'percentage'
+        ? Math.floor((subtotalCents * offer.discountValue) / 100)
+        : offer.discountValue;
     offer.usedCount += 1;
   }
 
@@ -64,7 +67,7 @@ export const createOrder = async (input: CreateOrderInput): Promise<Order> => {
     totalCents,
     status: 'pending',
     createdAt: nowIso(),
-    updatedAt: nowIso()
+    updatedAt: nowIso(),
   };
 
   memory.orders.set(id, order);

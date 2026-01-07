@@ -6,13 +6,18 @@
   "main": "dist/index.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup src/index.ts --dts --format esm,cjs",
     "dev": "tsup src/index.ts --dts --format esm,cjs --watch",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --test"
+  },
+  "dependencies": {
+    "@campus-os/types": "workspace:*"
   },
   "devDependencies": {
     "@campus-os/config": "workspace:*",
