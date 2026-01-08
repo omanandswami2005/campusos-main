@@ -1,13 +1,6 @@
-// Database-backed state using Prisma
-// This replaces the in-memory implementation for production use
+// Initial in-memory state with seed data
+// This file is now used by db.ts as the fallback store
 
-import { prisma } from '@campus-os/database';
-
-// Re-export prisma for use in commands/queries
-export { prisma };
-
-// Legacy memory state for backwards compatibility during migration
-// TODO: Remove after full migration
 import type { MenuItem, Order, PromotionalOffer, MessVotingPoll } from '@campus-os/types';
 
 export interface User {
@@ -29,7 +22,7 @@ type MemoryState = {
 
 export const JWT_SECRET = process.env.JWT_SECRET || 'demo-secret-key-change-in-prod';
 
-// Seed data for demo (will be replaced by database seed)
+// Seed data
 const menuSeed: MenuItem[] = [
   {
     id: 'item-coffee',
@@ -111,7 +104,6 @@ const userSeed: (User & { password: string })[] = [
   },
 ];
 
-// Keep memory state for backwards compatibility
 export const memory: MemoryState = {
   menu: menuSeed,
   offers: offerSeed,
@@ -120,3 +112,6 @@ export const memory: MemoryState = {
   polls: new Map(),
   userVotes: new Map(),
 };
+
+// Export null prisma for compatibility if any file still imports it
+export const prisma: any = null;

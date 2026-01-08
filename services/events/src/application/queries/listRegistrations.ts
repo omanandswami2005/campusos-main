@@ -1,19 +1,17 @@
-import { memory } from '../state/memory';
-import type { EventRegistration } from '../state/memory';
+import { getRegistrationsByUser, getRegistrationsByEvent } from '../state/db.js';
+import type { EventRegistration } from '../state/memory.js';
 
 export const listRegistrations = async (
   userId?: string,
   eventId?: string
 ): Promise<EventRegistration[]> => {
-  let registrations = Array.from(memory.registrations.values());
-
   if (userId) {
-    registrations = registrations.filter((r) => r.userId === userId);
+    return getRegistrationsByUser(userId);
   }
 
   if (eventId) {
-    registrations = registrations.filter((r) => r.eventId === eventId);
+    return getRegistrationsByEvent(eventId);
   }
 
-  return registrations;
+  return [];
 };

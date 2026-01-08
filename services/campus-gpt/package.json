@@ -1,0 +1,32 @@
+{
+  "name": "@campus-os/service-campus-gpt",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "build": "tsup src/server.ts --dts --format esm,cjs",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "openai": "^4.77.0",
+    "@campus-os/database": "workspace:*",
+    "@campus-os/types": "workspace:*",
+    "@campus-os/utils": "workspace:*",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@campus-os/config": "workspace:*",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.30",
+    "eslint": "^9.39.2",
+    "prettier": "^3.2.5",
+    "tsup": "^8.0.1",
+    "tsx": "^4.7.0",
+    "typescript": "^5.6.3"
+  }
+}

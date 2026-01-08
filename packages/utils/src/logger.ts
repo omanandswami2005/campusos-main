@@ -1,7 +1,17 @@
 import pino from 'pino';
-import chalk from 'chalk';
 
 const isDev = process.env.NODE_ENV !== 'production';
+
+// ANSI color codes (works in both ESM and CJS)
+const colors = {
+  gray: (s: string) => `\x1b[90m${s}\x1b[0m`,
+  blue: (s: string) => `\x1b[34m${s}\x1b[0m`,
+  red: (s: string) => `\x1b[31m${s}\x1b[0m`,
+  green: (s: string) => `\x1b[32m${s}\x1b[0m`,
+  yellow: (s: string) => `\x1b[33m${s}\x1b[0m`,
+  cyan: (s: string) => `\x1b[36m${s}\x1b[0m`,
+  magenta: (s: string) => `\x1b[35m${s}\x1b[0m`,
+};
 
 // Helpers
 const getTime = () => new Date().toLocaleTimeString();
@@ -38,7 +48,7 @@ export const createLogger = (serviceName: string): ServiceLogger => {
 
   const info = (message: string, meta?: object) => {
     if (isDev) {
-      console.log(`${chalk.gray(getTime())} ${chalk.blue('INFO ')} ${message}`);
+      console.log(`${colors.gray(getTime())} ${colors.blue('INFO ')} ${message}`);
       if (meta) console.log(meta);
     } else {
       pinoLogger.info(meta || {}, message);
@@ -47,15 +57,15 @@ export const createLogger = (serviceName: string): ServiceLogger => {
 
   const error = (message: string, err?: any, meta?: object) => {
     if (isDev) {
-      console.log(`${chalk.gray(getTime())} ${chalk.red('ERROR')} ${message}`);
+      console.log(`${colors.gray(getTime())} ${colors.red('ERROR')} ${message}`);
 
       // Handle ApiError-like structures
       if (err?.statusCode && err?.message) {
-        console.log(chalk.red(`      [${err.statusCode}] ${err.message}`));
-        if (err.errors) console.log(chalk.red(`      Errors: ${JSON.stringify(err.errors)}`));
+        console.log(colors.red(`      [${err.statusCode}] ${err.message}`));
+        if (err.errors) console.log(colors.red(`      Errors: ${JSON.stringify(err.errors)}`));
       } else if (err) {
         // Print stack trace if available, else just error
-        console.error(chalk.red(err.stack || err));
+        console.error(colors.red(err.stack || String(err)));
       }
 
       if (meta) console.log(meta);
@@ -72,9 +82,9 @@ export const createLogger = (serviceName: string): ServiceLogger => {
     meta?: object
   ) => {
     if (isDev) {
-      const statusColor = status >= 500 ? chalk.red : status >= 400 ? chalk.yellow : chalk.green;
+      const statusColor = status >= 500 ? colors.red : status >= 400 ? colors.yellow : colors.green;
       console.log(
-        `${chalk.gray(getTime())} ${chalk.cyan('REQ  ')} ${method} ${url} ${statusColor(status)} ${chalk.gray(durationMs + 'ms')}`
+        `${colors.gray(getTime())} ${colors.cyan('REQ  ')} ${method} ${url} ${statusColor(String(status))} ${colors.gray(durationMs + 'ms')}`
       );
     } else {
       pinoLogger.info({ method, url, status, durationMs, ...meta }, 'Request completed');
@@ -83,7 +93,7 @@ export const createLogger = (serviceName: string): ServiceLogger => {
 
   const warn = (message: string, meta?: object) => {
     if (isDev) {
-      console.log(`${chalk.gray(getTime())} ${chalk.yellow('WARN ')} ${message}`);
+      console.log(`${colors.gray(getTime())} ${colors.yellow('WARN ')} ${message}`);
       if (meta) console.log(meta);
     } else {
       pinoLogger.warn(meta || {}, message);
@@ -92,7 +102,7 @@ export const createLogger = (serviceName: string): ServiceLogger => {
 
   const debug = (message: string, meta?: object) => {
     if (isDev) {
-      console.log(`${chalk.gray(getTime())} ${chalk.magenta('DEBUG')} ${message}`, meta || '');
+      console.log(`${colors.gray(getTime())} ${colors.magenta('DEBUG')} ${message}`, meta || '');
     } else {
       pinoLogger.debug(meta || {}, message);
     }

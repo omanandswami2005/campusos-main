@@ -1,4 +1,5 @@
-import { memory, Club } from '../state/memory';
+import { getAllClubs } from '../state/db.js';
+import type { Club } from '../state/memory.js';
 
 interface ListClubsParams {
   collegeId?: string;
@@ -7,19 +8,18 @@ interface ListClubsParams {
   search?: string;
 }
 
-export const listClubs = (params: ListClubsParams = {}): Club[] => {
-  let clubs = Array.from(memory.clubs.values());
+export const listClubs = async (params: ListClubsParams = {}): Promise<Club[]> => {
+  let clubs = await getAllClubs({
+    status: params.status,
+  });
 
+  // Apply additional filters
   if (params.collegeId) {
     clubs = clubs.filter((c) => c.collegeId === params.collegeId);
   }
 
   if (params.category) {
     clubs = clubs.filter((c) => c.category === params.category);
-  }
-
-  if (params.status) {
-    clubs = clubs.filter((c) => c.status === params.status);
   }
 
   if (params.search) {

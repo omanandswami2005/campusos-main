@@ -1,5 +1,5 @@
 import http, { ServerResponse } from 'node:http';
-import { createLogger } from '@campus-os/utils';
+import { ApiError, ApiResponse, createLogger } from '@campus-os/utils';
 import { createPaymentOrder } from '../../application/commands/createPaymentOrder';
 import { verifyPayment } from '../../application/commands/verifyPayment';
 
@@ -29,13 +29,34 @@ function sendJson(res: ServerResponse, status: number, data: unknown, ctx?: Requ
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
   res.writeHead(status);
-  res.end(JSON.stringify({ success: status < 400, data, statusCode: status }));
+
+  let responseData = data;
+  if (!(data instanceof ApiResponse) && !(data && (data as any).success !== undefined)) {
+    responseData = new ApiResponse(status, data, status < 400 ? 'Success' : 'Error');
+  }
+
+  res.end(JSON.stringify(responseData));
 
   if (ctx) {
     const duration = Date.now() - ctx.startTime;
     requestLogger(ctx.method, ctx.path, status, duration, { requestId: ctx.requestId });
   }
+}
+
+function sendError(
+  res: ServerResponse,
+  status: number,
+  message: string,
+  ctx?: RequestContext,
+  originalError?: any
+): void {
+  const response = new ApiResponse(status, null, message);
+  if (ctx) {
+    errorLogger(message, originalError, { requestId: ctx.requestId });
+  }
+  sendJson(res, status, response, ctx);
 }
 
 export const createServer = () => {
@@ -75,8 +96,7 @@ export const createServer = () => {
         }>(req);
 
         if (!body || !body.amountCents || !body.orderId) {
-          sendJson(res, 400, { error: 'Missing amountCents or orderId' }, ctx);
-          return;
+          throw new ApiError(400, 'Missing amountCents or orderId');
         }
 
         const order = await createPaymentOrder({
@@ -89,12 +109,16 @@ export const createServer = () => {
         sendJson(
           res,
           201,
-          {
-            razorpayOrderId: order.razorpayOrderId,
-            amount: order.amount,
-            currency: order.currency,
-            keyId: process.env.RAZORPAY_KEY_ID, // Frontend needs this
-          },
+          new ApiResponse(
+            201,
+            {
+              razorpayOrderId: order.razorpayOrderId,
+              amount: order.amount,
+              currency: order.currency,
+              keyId: process.env.RAZORPAY_KEY_ID, // Frontend needs this
+            },
+            'Order created successfully'
+          ),
           ctx
         );
         return;
@@ -114,8 +138,7 @@ export const createServer = () => {
           !body.razorpay_payment_id ||
           !body.razorpay_signature
         ) {
-          sendJson(res, 400, { error: 'Missing payment verification fields' }, ctx);
-          return;
+          throw new ApiError(400, 'Missing payment verification fields');
         }
 
         const result = verifyPayment({
@@ -125,17 +148,31 @@ export const createServer = () => {
         });
 
         if (result.valid) {
-          sendJson(res, 200, { verified: true, paymentId: result.paymentId }, ctx);
+          sendJson(
+            res,
+            200,
+            new ApiResponse(
+              200,
+              { verified: true, paymentId: result.paymentId },
+              'Payment verified'
+            ),
+            ctx
+          );
         } else {
-          sendJson(res, 400, { verified: false, error: 'Invalid signature' }, ctx);
+          throw new ApiError(400, 'Invalid signature');
         }
         return;
       }
 
-      sendJson(res, 404, { error: 'Not found' }, ctx);
+      throw new ApiError(404, 'Not found');
     } catch (error: any) {
-      errorLogger(error.message, error, { requestId: ctx.requestId });
-      sendJson(res, 500, { error: 'Internal server error' }, ctx);
+      if (error instanceof ApiError) {
+        const payload: any = { message: error.message };
+        if (error.errors) payload.errors = error.errors;
+        sendJson(res, error.statusCode, payload, ctx);
+        return;
+      }
+      sendError(res, 500, 'Internal Server Error', ctx, error);
     }
   });
 
