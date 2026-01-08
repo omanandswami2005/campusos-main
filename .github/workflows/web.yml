@@ -32,5 +32,7 @@ jobs:
           cache: 'pnpm'
       - name: Install deps
         run: pnpm install --ignore-scripts
+      - name: Generate Prisma
+        run: pnpm db:generate
       - name: Build web
         run: pnpm turbo run build --filter=@campus-os/web

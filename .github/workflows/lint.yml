@@ -20,6 +20,8 @@ jobs:
           cache: 'pnpm'
       - name: Install deps
         run: pnpm install --ignore-scripts
+      - name: Generate Prisma
+        run: pnpm db:generate
       - name: Lint
         run: pnpm lint
       - name: Typecheck

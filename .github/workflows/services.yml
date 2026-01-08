@@ -32,6 +32,8 @@ jobs:
           cache: 'pnpm'
       - name: Install deps
         run: pnpm install --ignore-scripts
+      - name: Generate Prisma
+        run: pnpm db:generate
       - name: Typecheck canteen
         run: pnpm turbo run typecheck --filter=@campus-os/service-canteen
       - name: Build canteen
