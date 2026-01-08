@@ -10,6 +10,7 @@
     "dev:canteen": "pnpm --filter @campus-os/service-canteen dev",
     "dev:printing": "pnpm --filter @campus-os/service-printing dev",
     "dev:events": "pnpm --filter @campus-os/service-events dev",
+    "dev:payment": "pnpm --filter @campus-os/service-payment dev",
     "dev:services": "pnpm --filter \"@campus-os/service-*\" dev",
     "dev:apps": "pnpm --filter @campus-os/web --filter @campus-os/mobile dev",
     "dev:full": "turbo run dev --parallel --output-logs=full",

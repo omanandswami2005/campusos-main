@@ -10,13 +10,14 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@campus-os/database": "workspace:*",
     "@campus-os/types": "workspace:*",
     "@campus-os/utils": "workspace:*"
   },
   "devDependencies": {
     "@campus-os/config": "workspace:*",
     "@types/node": "^20.11.30",
-    "eslint": "^8.57.0",
+    "eslint": "^9.39.2",
     "prettier": "^3.2.5",
     "tsup": "^8.0.1",
     "tsx": "^4.7.0",

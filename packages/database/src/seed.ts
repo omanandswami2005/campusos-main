@@ -1,14 +1,6 @@
-import {
-  PrismaClient,
-  Role,
-  MenuCategory,
-  ClubStatus,
-  EventStatus,
-  ApprovalStatus,
-} from '@prisma/client';
+import { Role, MenuCategory, ClubStatus, EventStatus, ApprovalStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
+import { prisma } from './client';
 
 async function main() {
   console.log('🌱 Seeding database...');
@@ -147,7 +139,33 @@ async function main() {
         id: 'menu-coffee',
         name: 'Coffee',
         description: 'Hot brewed coffee',
-        priceCents: 250,
+        priceCents: 2500, // ₹25
+        category: MenuCategory.BEVERAGES,
+        available: true,
+        collegeId: college.id,
+      },
+    }),
+    prisma.menuItem.upsert({
+      where: { id: 'menu-tea' },
+      update: {},
+      create: {
+        id: 'menu-tea',
+        name: 'Masala Chai',
+        description: 'Traditional Indian spiced tea',
+        priceCents: 1500, // ₹15
+        category: MenuCategory.BEVERAGES,
+        available: true,
+        collegeId: college.id,
+      },
+    }),
+    prisma.menuItem.upsert({
+      where: { id: 'menu-lassi' },
+      update: {},
+      create: {
+        id: 'menu-lassi',
+        name: 'Sweet Lassi',
+        description: 'Refreshing yogurt drink',
+        priceCents: 4000, // ₹40
         category: MenuCategory.BEVERAGES,
         available: true,
         collegeId: college.id,
@@ -159,8 +177,8 @@ async function main() {
       create: {
         id: 'menu-samosa',
         name: 'Samosa',
-        description: 'Crispy potato samosa',
-        priceCents: 150,
+        description: 'Crispy potato samosa (2 pcs)',
+        priceCents: 2000, // ₹20
         category: MenuCategory.SNACKS,
         available: true,
         collegeId: college.id,
@@ -173,8 +191,34 @@ async function main() {
         id: 'menu-sandwich',
         name: 'Veg Sandwich',
         description: 'Toasted sandwich with veggies',
-        priceCents: 300,
+        priceCents: 4500, // ₹45
         category: MenuCategory.SNACKS,
+        available: true,
+        collegeId: college.id,
+      },
+    }),
+    prisma.menuItem.upsert({
+      where: { id: 'menu-burger' },
+      update: {},
+      create: {
+        id: 'menu-burger',
+        name: 'Veg Burger',
+        description: 'Crispy patty with fresh veggies',
+        priceCents: 6000, // ₹60
+        category: MenuCategory.SNACKS,
+        available: true,
+        collegeId: college.id,
+      },
+    }),
+    prisma.menuItem.upsert({
+      where: { id: 'menu-dosa' },
+      update: {},
+      create: {
+        id: 'menu-dosa',
+        name: 'Masala Dosa',
+        description: 'Crispy dosa with potato filling',
+        priceCents: 6000, // ₹60
+        category: MenuCategory.MEALS,
         available: true,
         collegeId: college.id,
       },
@@ -184,10 +228,36 @@ async function main() {
       update: {},
       create: {
         id: 'menu-biryani',
-        name: 'Chicken Biryani',
-        description: 'Aromatic rice with chicken',
-        priceCents: 1500,
+        name: 'Veg Biryani',
+        description: 'Aromatic rice with vegetables',
+        priceCents: 9000, // ₹90
         category: MenuCategory.MEALS,
+        available: true,
+        collegeId: college.id,
+      },
+    }),
+    prisma.menuItem.upsert({
+      where: { id: 'menu-thali' },
+      update: {},
+      create: {
+        id: 'menu-thali',
+        name: 'Special Thali',
+        description: 'Rice, roti, dal, sabzi, papad',
+        priceCents: 12000, // ₹120
+        category: MenuCategory.MEALS,
+        available: true,
+        collegeId: college.id,
+      },
+    }),
+    prisma.menuItem.upsert({
+      where: { id: 'menu-gulabjamun' },
+      update: {},
+      create: {
+        id: 'menu-gulabjamun',
+        name: 'Gulab Jamun',
+        description: 'Sweet syrup dumplings (2 pcs)',
+        priceCents: 3000, // ₹30
+        category: MenuCategory.DESSERTS,
         available: true,
         collegeId: college.id,
       },

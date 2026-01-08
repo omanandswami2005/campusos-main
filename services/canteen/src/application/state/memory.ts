@@ -1,3 +1,13 @@
+// Database-backed state using Prisma
+// This replaces the in-memory implementation for production use
+
+import { prisma } from '@campus-os/database';
+
+// Re-export prisma for use in commands/queries
+export { prisma };
+
+// Legacy memory state for backwards compatibility during migration
+// TODO: Remove after full migration
 import type { MenuItem, Order, PromotionalOffer, MessVotingPoll } from '@campus-os/types';
 
 export interface User {
@@ -17,14 +27,15 @@ type MemoryState = {
   userVotes: Map<string, { userId: string; pollId: string; option: string }>;
 };
 
-export const JWT_SECRET = 'demo-secret-key-change-in-prod';
+export const JWT_SECRET = process.env.JWT_SECRET || 'demo-secret-key-change-in-prod';
 
+// Seed data for demo (will be replaced by database seed)
 const menuSeed: MenuItem[] = [
   {
     id: 'item-coffee',
     name: 'Coffee',
     description: 'Hot brewed coffee',
-    priceCents: 250,
+    priceCents: 2500, // ₹25
     category: 'beverages',
     available: true,
     imageUrl: '',
@@ -34,7 +45,7 @@ const menuSeed: MenuItem[] = [
     id: 'item-samosa',
     name: 'Samosa',
     description: 'Crispy potato samosa',
-    priceCents: 150,
+    priceCents: 1500, // ₹15
     category: 'snacks',
     available: true,
     imageUrl: '',
@@ -44,8 +55,28 @@ const menuSeed: MenuItem[] = [
     id: 'item-sandwich',
     name: 'Veg Sandwich',
     description: 'Toasted sandwich with veggies',
-    priceCents: 300,
+    priceCents: 4000, // ₹40
     category: 'snacks',
+    available: true,
+    imageUrl: '',
+    collegeId: 'college-a',
+  },
+  {
+    id: 'item-dosa',
+    name: 'Masala Dosa',
+    description: 'Crispy dosa with potato filling',
+    priceCents: 6000, // ₹60
+    category: 'meals',
+    available: true,
+    imageUrl: '',
+    collegeId: 'college-a',
+  },
+  {
+    id: 'item-biryani',
+    name: 'Veg Biryani',
+    description: 'Aromatic rice with vegetables',
+    priceCents: 12000, // ₹120
+    category: 'meals',
     available: true,
     imageUrl: '',
     collegeId: 'college-a',
@@ -59,7 +90,7 @@ const offerSeed: PromotionalOffer[] = [
     description: '10% off above ₹100',
     discountType: 'percentage',
     discountValue: 10,
-    minOrderValue: 1000,
+    minOrderValue: 10000, // ₹100
     startDate: new Date(Date.now() - 3600_000).toISOString(),
     endDate: new Date(Date.now() + 7 * 24 * 3600_000).toISOString(),
     usageLimit: 1000,
@@ -78,16 +109,9 @@ const userSeed: (User & { password: string })[] = [
     role: 'student',
     password: 'demo123',
   },
-  {
-    id: 'user-admin',
-    name: 'Admin Staff',
-    email: 'admin@college.edu',
-    collegeId: 'college-a',
-    role: 'admin',
-    password: 'admin123',
-  },
 ];
 
+// Keep memory state for backwards compatibility
 export const memory: MemoryState = {
   menu: menuSeed,
   offers: offerSeed,

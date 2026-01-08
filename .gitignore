@@ -9,7 +9,7 @@ build/
 
 # Env
 .env
-.env.*
+.env.local
 
 # Capacitor / Native
 android/

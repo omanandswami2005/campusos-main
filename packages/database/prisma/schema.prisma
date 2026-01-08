@@ -20,72 +20,72 @@ enum Role {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
+  id            String  @id @default(cuid())
+  email         String  @unique
   passwordHash  String
   name          String
   avatarUrl     String?
-  role          Role      @default(STUDENT)
+  role          Role    @default(STUDENT)
   collegeId     String
-  isActive      Boolean   @default(true)
-  emailVerified Boolean   @default(false)
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  lastLoginAt   DateTime?
+  isActive      Boolean @default(true)
+  emailVerified Boolean @default(false)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
 
   // Relations
-  college              College              @relation(fields: [collegeId], references: [id])
-  refreshTokens        RefreshToken[]
-  clubCoordinator      Club[]               @relation("ClubCoordinator")
-  clubMemberships      ClubMember[]
-  eventRegistrations   EventRegistration[]
-  eventAttendance      EventAttendance[]
-  eventFeedback        EventFeedback[]
-  certificates         Certificate[]
-  notifications        Notification[]
-  canteenOrders        CanteenOrder[]
-  canteenVotes         MessVote[]
-  printJobs            PrintJob[]
-  
+  college            College             @relation(fields: [collegeId], references: [id])
+  refreshTokens      RefreshToken[]
+  clubCoordinator    Club[]              @relation("ClubCoordinator")
+  clubMemberships    ClubMember[]
+  eventRegistrations EventRegistration[]
+  eventAttendance    EventAttendance[]
+  eventFeedback      EventFeedback[]
+  certificates       Certificate[]
+  notifications      Notification[]
+  canteenOrders      CanteenOrder[]
+  canteenVotes       MessVote[]
+  printJobs          PrintJob[]
+
   @@index([email])
   @@index([collegeId])
   @@map("users")
 }
 
 model RefreshToken {
-  id          String   @id @default(cuid())
-  token       String   @unique
-  userId      String
-  expiresAt   DateTime
-  createdAt   DateTime @default(now())
-  revokedAt   DateTime?
-  
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([token])
   @@index([userId])
   @@map("refresh_tokens")
 }
 
 model College {
-  id          String   @id @default(cuid())
-  name        String
-  code        String   @unique
-  domain      String?  // For email domain validation
-  logoUrl     String?
-  isActive    Boolean  @default(true)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id       String  @id @default(cuid())
+  name     String
+  code     String  @unique
+  domain   String? // For email domain validation
+  logoUrl  String?
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  users       User[]
-  clubs       Club[]
-  events      Event[]
-  menuItems   MenuItem[]
-  printShops  PrintShop[]
-  
+  users      User[]
+  clubs      Club[]
+  events     Event[]
+  menuItems  MenuItem[]
+  printShops PrintShop[]
+
   @@map("colleges")
 }
 
@@ -109,23 +109,23 @@ model Club {
   status        ClubStatus @default(PENDING)
   memberCount   Int        @default(0)
   foundedDate   DateTime?
-  socialLinks   Json?      // { platform: string, url: string }[]
-  
-  collegeId     String
-  coordinatorId String
-  approvedById  String?
-  approvedAt    DateTime?
+  socialLinks   Json? // { platform: string, url: string }[]
+
+  collegeId       String
+  coordinatorId   String
+  approvedById    String?
+  approvedAt      DateTime?
   rejectionReason String?
-  
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  college       College    @relation(fields: [collegeId], references: [id])
-  coordinator   User       @relation("ClubCoordinator", fields: [coordinatorId], references: [id])
-  members       ClubMember[]
-  events        Event[]
-  
+  college     College      @relation(fields: [collegeId], references: [id])
+  coordinator User         @relation("ClubCoordinator", fields: [coordinatorId], references: [id])
+  members     ClubMember[]
+  events      Event[]
+
   @@index([collegeId])
   @@index([coordinatorId])
   @@index([status])
@@ -133,15 +133,15 @@ model Club {
 }
 
 model ClubMember {
-  id        String   @id @default(cuid())
-  clubId    String
-  userId    String
-  role      String   @default("member") // member, moderator
-  joinedAt  DateTime @default(now())
-  
-  club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id       String   @id @default(cuid())
+  clubId   String
+  userId   String
+  role     String   @default("member") // member, moderator
+  joinedAt DateTime @default(now())
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([clubId, userId])
   @@map("club_members")
 }
@@ -161,7 +161,7 @@ enum ApprovalStatus {
 }
 
 model Event {
-  id                   String         @id @default(cuid())
+  id                   String   @id @default(cuid())
   title                String
   description          String?
   startDate            DateTime
@@ -173,31 +173,31 @@ model Event {
   rules                String[]
   category             String
   capacity             Int
-  registeredCount      Int            @default(0)
-  isPublic             Boolean        @default(true)
+  registeredCount      Int      @default(0)
+  isPublic             Boolean  @default(true)
   registrationDeadline DateTime
-  
-  status               EventStatus    @default(DRAFT)
-  approvalStatus       ApprovalStatus @default(PENDING)
-  approvedById         String?
-  approvedAt           DateTime?
-  rejectionReason      String?
-  
-  collegeId            String
-  clubId               String?
-  organizerId          String
-  
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
-  
+
+  status          EventStatus    @default(DRAFT)
+  approvalStatus  ApprovalStatus @default(PENDING)
+  approvedById    String?
+  approvedAt      DateTime?
+  rejectionReason String?
+
+  collegeId   String
+  clubId      String?
+  organizerId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  college              College            @relation(fields: [collegeId], references: [id])
-  club                 Club?              @relation(fields: [clubId], references: [id])
-  registrations        EventRegistration[]
-  attendance           EventAttendance[]
-  feedback             EventFeedback[]
-  certificates         Certificate[]
-  
+  college       College             @relation(fields: [collegeId], references: [id])
+  club          Club?               @relation(fields: [clubId], references: [id])
+  registrations EventRegistration[]
+  attendance    EventAttendance[]
+  feedback      EventFeedback[]
+  certificates  Certificate[]
+
   @@index([collegeId])
   @@index([clubId])
   @@index([status])
@@ -219,10 +219,10 @@ model EventRegistration {
   status       RegistrationStatus @default(REGISTERED)
   registeredAt DateTime           @default(now())
   cancelledAt  DateTime?
-  
-  event        Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([eventId, userId])
   @@index([eventId])
   @@index([userId])
@@ -243,29 +243,29 @@ model EventAttendance {
   checkInTime  DateTime?
   checkOutTime DateTime?
   markedById   String
-  
-  createdAt    DateTime         @default(now())
-  
-  event        Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
+  createdAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([eventId, userId])
   @@map("event_attendance")
 }
 
 model EventFeedback {
-  id           String   @id @default(cuid())
-  eventId      String
-  userId       String
-  rating       Int      // 1-5
-  comment      String?
-  categories   Json     // { organization, content, venue, overall }
-  isAnonymous  Boolean  @default(false)
-  submittedAt  DateTime @default(now())
-  
-  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id          String   @id @default(cuid())
+  eventId     String
+  userId      String
+  rating      Int // 1-5
+  comment     String?
+  categories  Json // { organization, content, venue, overall }
+  isAnonymous Boolean  @default(false)
+  submittedAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([eventId, userId])
   @@map("event_feedback")
 }
@@ -289,10 +289,10 @@ model Certificate {
   eventDate         DateTime
   issuedAt          DateTime        @default(now())
   downloadUrl       String?
-  
-  event             Event           @relation(fields: [eventId], references: [id])
-  user              User            @relation(fields: [userId], references: [id])
-  
+
+  event Event @relation(fields: [eventId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
   @@unique([eventId, userId, type])
   @@index([certificateNumber])
   @@map("certificates")
@@ -319,13 +319,13 @@ model Notification {
   type      NotificationType
   title     String
   message   String
-  data      Json?            // Additional metadata (eventId, orderId, etc.)
+  data      Json? // Additional metadata (eventId, orderId, etc.)
   isRead    Boolean          @default(false)
   createdAt DateTime         @default(now())
   readAt    DateTime?
-  
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId, isRead])
   @@index([createdAt])
   @@map("notifications")
@@ -350,33 +350,33 @@ model MenuItem {
   imageUrl    String?
   available   Boolean      @default(true)
   collegeId   String
-  
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  
-  college     College      @relation(fields: [collegeId], references: [id])
-  orderItems  OrderItem[]
-  
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  college    College     @relation(fields: [collegeId], references: [id])
+  orderItems OrderItem[]
+
   @@index([collegeId])
   @@index([category])
   @@map("menu_items")
 }
 
 model PromotionalOffer {
-  id           String   @id @default(cuid())
-  code         String   @unique
-  description  String
-  discountType String   // percentage, flat
-  value        Int      // percentage value or cents
-  minOrderCents Int     @default(0)
-  maxUses      Int?
-  usedCount    Int      @default(0)
-  validFrom    DateTime
-  validUntil   DateTime
-  isActive     Boolean  @default(true)
-  
-  createdAt    DateTime @default(now())
-  
+  id            String   @id @default(cuid())
+  code          String   @unique
+  description   String
+  discountType  String // percentage, flat
+  value         Int // percentage value or cents
+  minOrderCents Int      @default(0)
+  maxUses       Int?
+  usedCount     Int      @default(0)
+  validFrom     DateTime
+  validUntil    DateTime
+  isActive      Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+
   @@index([code])
   @@map("promotional_offers")
 }
@@ -396,25 +396,36 @@ enum PaymentMethod {
   WALLET
 }
 
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
 model CanteenOrder {
-  id               String        @id @default(cuid())
+  id               String         @id @default(cuid())
   userId           String
   collegeId        String
-  status           OrderStatus   @default(PENDING)
+  status           OrderStatus    @default(PENDING)
+  paymentStatus    PaymentStatus  @default(PENDING)
   subtotalCents    Int
-  discountCents    Int           @default(0)
+  discountCents    Int            @default(0)
   totalCents       Int
-  deliveryLocation String
-  paymentMethod    PaymentMethod
+  deliveryLocation String?
+  paymentMethod    PaymentMethod?
   appliedOffer     String?
+  appliedOfferId   String?
   estimatedReadyAt DateTime?
-  
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  
-  user             User          @relation(fields: [userId], references: [id])
-  items            OrderItem[]
-  
+  otp              String?
+  otpExpiresAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User        @relation(fields: [userId], references: [id])
+  items OrderItem[]
+
   @@index([userId])
   @@index([status])
   @@index([createdAt])
@@ -422,44 +433,44 @@ model CanteenOrder {
 }
 
 model OrderItem {
-  id         String   @id @default(cuid())
+  id         String @id @default(cuid())
   orderId    String
   menuItemId String
   quantity   Int
   priceCents Int
-  
-  order      CanteenOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  menuItem   MenuItem     @relation(fields: [menuItemId], references: [id])
-  
+
+  order    CanteenOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem MenuItem     @relation(fields: [menuItemId], references: [id])
+
   @@map("order_items")
 }
 
 model MessVotingPoll {
-  id          String    @id @default(cuid())
-  question    String
-  options     String[]
-  collegeId   String
-  isActive    Boolean   @default(true)
-  startsAt    DateTime
-  endsAt      DateTime
-  
-  createdAt   DateTime  @default(now())
-  
-  votes       MessVote[]
-  
+  id        String   @id @default(cuid())
+  question  String
+  options   String[]
+  collegeId String
+  isActive  Boolean  @default(true)
+  startsAt  DateTime
+  endsAt    DateTime
+
+  createdAt DateTime @default(now())
+
+  votes MessVote[]
+
   @@map("mess_voting_polls")
 }
 
 model MessVote {
-  id        String         @id @default(cuid())
-  pollId    String
-  userId    String
-  option    String
-  votedAt   DateTime       @default(now())
-  
-  poll      MessVotingPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
-  user      User           @relation(fields: [userId], references: [id])
-  
+  id      String   @id @default(cuid())
+  pollId  String
+  userId  String
+  option  String
+  votedAt DateTime @default(now())
+
+  poll MessVotingPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user User           @relation(fields: [userId], references: [id])
+
   @@unique([pollId, userId])
   @@map("mess_votes")
 }
@@ -467,22 +478,22 @@ model MessVote {
 // ============== PRINTING ==============
 
 model PrintShop {
-  id          String    @id @default(cuid())
-  name        String
-  location    String
-  collegeId   String
-  isOpen      Boolean   @default(true)
-  pricePerPageCents Int @default(200)
-  colorPricePerPageCents Int @default(500)
-  openTime    String?   // "09:00"
-  closeTime   String?   // "18:00"
-  
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  
-  college     College   @relation(fields: [collegeId], references: [id])
-  printJobs   PrintJob[]
-  
+  id                     String  @id @default(cuid())
+  name                   String
+  location               String
+  collegeId              String
+  isOpen                 Boolean @default(true)
+  pricePerPageCents      Int     @default(200)
+  colorPricePerPageCents Int     @default(500)
+  openTime               String? // "09:00"
+  closeTime              String? // "18:00"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  college   College    @relation(fields: [collegeId], references: [id])
+  printJobs PrintJob[]
+
   @@index([collegeId])
   @@map("print_shops")
 }
@@ -508,14 +519,14 @@ model PrintJob {
   status        PrintJobStatus @default(PENDING)
   totalCents    Int
   notes         String?
-  
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  completedAt   DateTime?
-  
-  user          User           @relation(fields: [userId], references: [id])
-  shop          PrintShop      @relation(fields: [shopId], references: [id])
-  
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+
+  user User      @relation(fields: [userId], references: [id])
+  shop PrintShop @relation(fields: [shopId], references: [id])
+
   @@index([userId])
   @@index([shopId])
   @@index([status])
@@ -534,7 +545,7 @@ model AuditLog {
   ipAddress  String?
   userAgent  String?
   createdAt  DateTime @default(now())
-  
+
   @@index([userId])
   @@index([action])
   @@index([createdAt])
